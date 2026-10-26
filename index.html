@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Send offer</title>
+<style>
+  :root { --bg: #f6f7f9; --card: #fff; --text: #1c1e21; --muted: #65676b; --line: #dcdfe4;
+          --viber: #7360f2; --wa: #1fa855; --btn: #e9ebee; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #18191a; --card: #242526; --text: #e4e6eb; --muted: #b0b3b8; --line: #3a3b3c; --btn: #3a3b3c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text);
+         font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 480px; margin: 0 auto; background: var(--card); border-radius: 14px; padding: 18px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .to { color: var(--muted); margin-bottom: 12px; }
+  textarea { width: 100%; min-height: 170px; padding: 10px; border: 1px solid var(--line); border-radius: 10px;
+             background: var(--bg); color: var(--text); font: inherit; resize: vertical; }
+  .hint { color: var(--muted); font-size: 13px; margin: 6px 0 14px; }
+  a.btn, button { display: block; width: 100%; padding: 13px; margin-top: 10px; border: 0; border-radius: 10px;
+                  font: 600 16px system-ui, sans-serif; text-align: center; text-decoration: none;
+                  background: var(--btn); color: var(--text); cursor: pointer; }
+  .viber { background: var(--viber) !important; color: #fff !important; }
+  .wa { background: var(--wa) !important; color: #fff !important; }
+  .err { color: #d93025; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Send offer</h1>
+  <div class="to" id="to"></div>
+  <textarea id="msg" aria-label="Message"></textarea>
+  <div class="hint">You can edit the text (e.g. the offer) before sending.</div>
+  <a class="btn viber" id="viber" href="#">Open in Viber</a>
+  <a class="btn wa" id="wa" href="#">Open in WhatsApp</a>
+  <a class="btn" id="sms" href="#">Send as SMS</a>
+  <button id="copy" type="button">Copy message</button>
+  <a class="btn" id="call" href="#">Call</a>
+</main>
+<script>
+  // Data rides in the URL fragment (#n=..&t=..), which browsers never send to the server.
+  const p = new URLSearchParams(location.hash.slice(1));
+  const num = (p.get("n") || "").replace(/[^\d+]/g, "");
+  const isViber = p.get("v") === "1";
+  const msg = document.getElementById("msg");
+  msg.value = p.get("t") || "";
+
+  if (!num) {
+    document.getElementById("to").innerHTML = '<span class="err">No phone number in this link.</span>';
+  } else {
+    document.getElementById("to").textContent = "To " + num + (isViber ? " (has Viber)" : "");
+  }
+
+  const digits = num.replace("+", "");
+  const enc = encodeURIComponent;
+  const links = {
+    viber: () => "viber://chat?number=" + enc(num) + "&draft=" + enc(msg.value),
+    wa: () => "https://wa.me/" + digits + "?text=" + enc(msg.value),
+    sms: () => "sms:" + num + "?&body=" + enc(msg.value),
+    call: () => "tel:" + num,
+  };
+  for (const id of Object.keys(links)) {
+    const a = document.getElementById(id);
+    a.addEventListener("click", (e) => { a.href = links[id](); });
+    a.href = links[id]();
+  }
+  document.getElementById("copy").addEventListener("click", async (e) => {
+    try { await navigator.clipboard.writeText(msg.value); e.target.textContent = "Copied ✓"; }
+    catch { msg.select(); document.execCommand("copy"); e.target.textContent = "Copied ✓"; }
+  });
+  if (!isViber) document.getElementById("viber").style.display = "none";
+  // Straight into Viber when the number has it; the buttons stay as fallback.
+  if (num && isViber) setTimeout(() => { location.href = links.viber(); }, 300);
+</script>
+</body>
+</html>
